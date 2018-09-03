@@ -22,7 +22,8 @@ object OneId {
 
 //    val path = "/E:/oneID/oneId_test.txt" // test file path
     //    val path = "/E:/oneID/data.log.2018-08-13.002" //
-    val path = "./oneId_test.txt"
+    val path = "/yanzi/oneId_test.txt"
+    //// test v0.3
 
     val sqlContext = new SQLContext(sc)
 
