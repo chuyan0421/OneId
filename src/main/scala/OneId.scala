@@ -119,7 +119,7 @@ object OneId {
     configuration.set("hbase.zookeeper.quorum", "localhost")
 
 //    val tableName = "ods_id_mapping_di"
-    val tableName = "test"
+    val tableName = "dtplatform:ods_id_mapping_di"
     val jobConf:JobConf = new JobConf(configuration,this.getClass)
     jobConf.setOutputFormat(classOf[TableOutputFormat])
     jobConf.set(TableOutputFormat.OUTPUT_TABLE,tableName)
