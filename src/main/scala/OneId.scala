@@ -18,17 +18,16 @@ object OneId {
 
     val conf = new SparkConf().setMaster("local[*]").setAppName("OneId Application")
     val sc = new SparkContext(conf)
-    sc.setLogLevel("WARN")
 
 //    val path = "/E:/oneID/oneId_test.txt" // test file path
     //    val path = "/E:/oneID/data.log.2018-08-13.002" //
-    val path = "/yanzi/oneId_test.txt"
-    //// test v0.3
+    val pathApp = "/yanzi/oneId_test.txt"
+    val pathImarking = "hdfs://192.168.33.25:8020/data/dtplatform/sass/ods/ods_act_click_log.parquet/ds=2018083111"
 
     val sqlContext = new SQLContext(sc)
 
     ///数据预处理，删除空值,$开头的节点在sql会报错
-    val preData = sc.textFile(path)
+    val preData = sc.textFile(pathApp)
       .filter(line => line.contains("未取到值") == false)
       .map(line => line.replaceAll("\\$",""))
       .map(line => line.replaceAll("00000000-0000-0000-0000-000000000000"," "))
@@ -38,26 +37,28 @@ object OneId {
       .filter(line => line.contains("PC端商城") == false) /// 非PC端商城
     println("number of valid APP data is: " + appOfData.count())
 
-
     val appSql = sqlContext.read.json(appOfData)
     appSql.registerTempTable("appSql")
     val appData = sqlContext
       .sql("SELECT properties.login_id, properties.device_id, " +
         "properties.mac, properties.idfa, distinct_id FROM appSql")
 
+//    val pcOfData = preData
+//      .filter(line => line.contains("browser")) /// pc埋点数据
+//      .filter(line => line.contains("PC端商城")) /// PC端商城
+//    println("number of valid PC data is: " + pcOfData.count())
+//
+//    val pcSql = sqlContext.read.json(pcOfData)
+//    pcSql.registerTempTable("pcSql")
+//    val pcData = sqlContext
+//      .sql("SELECT properties.user_id, properties.device_id, " +
+//        "properties.cookie_id, distinct_id FROM pcSql")
 
-    val pcOfData = preData
-      .filter(line => line.contains("browser")) /// pc埋点数据
-      .filter(line => line.contains("PC端商城")) /// PC端商城
-    println("number of valid PC data is: " + pcOfData.count())
-
-    val pcSql = sqlContext.read.json(pcOfData)
-    pcSql.registerTempTable("pcSql")
-
-    val pcData = sqlContext
-      .sql("SELECT properties.user_id, properties.device_id, " +
-        "properties.cookie_id, distinct_id FROM pcSql")
-
+    val imarkingSql = sqlContext.read.parquet(pathImarking)
+    imarkingSql.registerTempTable("imarkingSql")
+    val imarkingData = sqlContext
+      .sql("SELECT REAL_USER_ID,USER_PHONE,CURRENT_ID FROM imarkingSql")
+    println("loading imarking")
 
     /* vertices initialization  */
     /// android can get mac, iphone can get idfa, distinct_id may be telephone number
@@ -72,6 +73,9 @@ object OneId {
     //    val pcCookieId = createVertexFromDataframe(pcData,"cookie_id","cookie_id")
     //    val pcDistinctId = createVertexFromDataframe(pcData,"distinct_id","distinct_id")
 
+    val imUserId = createVertexFromDataframe(imarkingData,"REAL_USER_ID","imUserId")
+    val imPhone = createVertexFromDataframe(imarkingData,"USER_PHONE","phone")
+    val imOpenId = createVertexFromDataframe(imarkingData,"CURRENT_ID","openId")
 
     /* edge initialization  */
     val  edgeRDD1 = createEdgeFromDataframe(appData,"device_id","login_id","device_login")
@@ -83,12 +87,16 @@ object OneId {
     //    val  edgeRDD6 = createEdgeFromDataframe(pcData,"device_id","cookie_id","device_cookie")
     //    val  edgeRDD7 = createEdgeFromDataframe(pcData,"device_id","distinct_id","device_distinct")
 
+    val  edgeRDD8 = createEdgeFromDataframe(imarkingData,"REAL_USER_ID","USER_PHONE","user_phone")
+    val  edgeRDD9 = createEdgeFromDataframe(imarkingData,"CURRENT_ID","USER_PHONE","openId_phone")
+
+
 
     ///construct  graph
-    val vertexRDD = userId.union(deviceId).union(mac).union(idfa).union(phone)
+    val vertexRDD = userId.union(deviceId).union(mac).union(idfa).union(phone).union(imUserId).union(imPhone).union(imOpenId)
 //      .union(pcDeviceId)
     //    verticeRDD.collect().foreach(println(_))
-    val relationRDD = edgeRDD1.union(edgeRDD2).union(edgeRDD3).union(edgeRDD4)
+    val relationRDD = edgeRDD1.union(edgeRDD2).union(edgeRDD3).union(edgeRDD4).union(edgeRDD8).union(edgeRDD9)
 
     //    println(relationRDD.first())
     val defaultVertex = ("Missing","Missing")
