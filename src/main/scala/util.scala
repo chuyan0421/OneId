@@ -67,6 +67,30 @@ object util {
 
   }
 
+  def test(graph: Graph[(String,String),String ], ccGraph: Graph[graphx.VertexId, String]) = {
+    outPutDisplay(graph, ccGraph, "13911598833") //phone android
+    outPutDisplay(graph, ccGraph, "78:36:CC:59:47:AD") ///session_id android
+    outPutDisplay(graph, ccGraph, "50799EFF-E113-4017-B54B-6A2513C6F444") //
+    outPutDisplay(graph, ccGraph, "13506650288") ///
+    outPutDisplay(graph, ccGraph, "13408442244") //
+    outPutDisplay(graph, ccGraph, "165312b063a87-077dcfdb92435a-36465d60-1310720-165312b063bb5") ///
+
+    // test
+    val searchTest = "13911598833" //phone
+    println()
+    println("subId: " + searchTest + " , oneId is: ")
+    val (oneId, vertexName) = findOneId(graph, ccGraph, searchTest)
+    println(oneId.toString + " " + vertexName)
+
+    val searchTest2 = 562296217L
+    println()
+    println("OneId: " + searchTest2 + " , relevant ids are:")
+    val relevantIds2 = relevatIdsFromOneId(graph, ccGraph, searchTest2)
+    for (a <- 0 until relevantIds2.size) {
+      println(searchTest2.toString + " " + relevantIds2(a))
+    }
+  }
+
   ////从cc子图出查询oneID及原图顶点属性
   //
   //  def oneIdFromGraph(graph: Graph[(String,String),String],ccGraph: Graph[graphx.VertexId, String],string: String):(Long,ArrayBuffer[(String,String)]) = {
@@ -78,6 +102,13 @@ object util {
   //    }
   //    return (oneId,relevantIds)
   //  }
+
+  /////查找子图中入度>=2的节点
+  //    ccGraph.inDegrees.filter(t => t._2 >= 2).foreach(println(_))
+  //    val searchTest3 = 1867229706
+  //    val temp = graph.vertices.lookup(searchTest3)(0)
+  //    println(temp)
+  //    outPutDisplay(graph,ccGraph,temp._2)///
 
 
 

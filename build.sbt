@@ -10,10 +10,14 @@ libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.6.3"
 
 libraryDependencies += "org.apache.spark" %% "spark-graphx" % "1.6.3"
 
+libraryDependencies += "org.apache.spark" %% "spark-hive" % "1.6.3"
+
 libraryDependencies += "org.apache.hbase" % "hbase-common" % "1.2.0"
 
 libraryDependencies += "org.apache.hbase" % "hbase-client" % "1.2.0"
 
 libraryDependencies += "org.apache.hbase" % "hbase-server" % "1.2.0"
 
-mainClass in (Compile, run) := Some("OneId")
+
+mainClass in (Compile, run) := Some("HiveTest")
+mainClass in (Compile, packageBin) := Some("HiveTest")
