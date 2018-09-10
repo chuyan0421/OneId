@@ -19,5 +19,5 @@ libraryDependencies += "org.apache.hbase" % "hbase-client" % "1.2.0"
 libraryDependencies += "org.apache.hbase" % "hbase-server" % "1.2.0"
 
 
-mainClass in (Compile, run) := Some("HiveTest")
-mainClass in (Compile, packageBin) := Some("HiveTest")
+mainClass in (Compile, run) := Some("OneId")
+mainClass in (Compile, packageBin) := Some("OneId")
