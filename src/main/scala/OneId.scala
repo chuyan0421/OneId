@@ -13,6 +13,7 @@ import org.apache.spark.sql.{DataFrame, SQLContext}
 import util._
 import HiveOperation._
 import HbaseOperation._
+import org.apache.spark.sql.hive.HiveContext
 
 object OneId {
 
@@ -57,13 +58,20 @@ object OneId {
 //      .sql("SELECT properties.user_id, properties.device_id, " +
 //        "properties.cookie_id, distinct_id FROM pcSql")
 
-
+        //// connect remote hdfs
         val imarkingSql = sqlContext.read.parquet(pathImarking)
         imarkingSql.registerTempTable("imarkingSql")
         val imarkingData = sqlContext
           .sql("SELECT REAL_USER_ID,USER_PHONE,CURRENT_ID FROM imarkingSql")
 
-        val isalesData = getHiveDataframe(sqlContext)
+        val isalesData = getHiveDataframe(sqlContext) ////jdbc connect remote
+
+        ///connect remote hive
+//        val hiveContext = new HiveContext(sc)
+//        hiveContext.setConf("hive.metastore.uris", "thrift://192.168.33.25:9083")
+//        hiveContext.sql("use dtplatform")
+//        val isalesData=hiveContext.sql("select user_id,email,phone from dtplatform.dim_us_user limit 2000")
+
 
         /* vertices initialization  */
         /// android can get mac, iphone can get idfa, distinct_id may be telephone number
@@ -71,7 +79,7 @@ object OneId {
         val deviceId = createVertexFromDataframe(appData,"device_id","session_id")
         val mac = createVertexFromDataframe(appData,"mac","mac")
         val idfa = createVertexFromDataframe(appData,"idfa","idfa")
-        val phone = createVertexFromDataframe(appData,"distinct_id","Phone")
+        val phone = createVertexFromDataframe(appData,"distinct_id","phone")
 
         //    val pcUserId = createVertexFromDataframe(pcData,"user_id","user_id")
         //    val pcDeviceId = createVertexFromDataframe(pcData,"device_id","session_id")
@@ -79,31 +87,29 @@ object OneId {
         //    val pcDistinctId = createVertexFromDataframe(pcData,"distinct_id","distinct_id")
 
         val imUserId = createVertexFromDataframe(imarkingData,"REAL_USER_ID","imUserId")
-        val imPhone = createVertexFromDataframe(imarkingData,"USER_PHONE","Phone")
+        val imPhone = createVertexFromDataframe(imarkingData,"USER_PHONE","phone")
         val imOpenId = createVertexFromDataframe(imarkingData,"CURRENT_ID","openId")
 
         val isUserId = createVertexFromDataframe(isalesData,"user_id","isUserId")
         //    val isEmail = createVertexFromDataframe(isalesData,"email","isEmail")
-        val isPhone = createVertexFromDataframe(isalesData,"phone","Phone")
+        val isPhone = createVertexFromDataframe(isalesData,"phone","phone")
 
 
         /* edge initialization  */
-        val  edgeRDD1 = createEdgeFromDataframe(appData,"device_id","login_id","device_login")
-        val  edgeRDD2 = createEdgeFromDataframe(appData,"device_id","mac","device_mac")
-        val  edgeRDD3 = createEdgeFromDataframe(appData,"device_id","idfa","device_idfa")
-        val  edgeRDD4 = createEdgeFromDataframe(appData,"device_id","distinct_id","device_phone")
+        val  edgeRDD1 = createEdgeFromDataframe(appData,"device_id","login_id","maotai")
+        val  edgeRDD2 = createEdgeFromDataframe(appData,"device_id","mac","maotai")
+        val  edgeRDD3 = createEdgeFromDataframe(appData,"device_id","idfa","maotai")
+        val  edgeRDD4 = createEdgeFromDataframe(appData,"device_id","distinct_id","maotai")
 
         //    val  edgeRDD5 = createEdgeFromDataframe(pcData,"device_id","user_id","device_login")
         //    val  edgeRDD6 = createEdgeFromDataframe(pcData,"device_id","cookie_id","device_cookie")
         //    val  edgeRDD7 = createEdgeFromDataframe(pcData,"device_id","distinct_id","device_distinct")
 
-        val  edgeRDD8 = createEdgeFromDataframe(imarkingData,"REAL_USER_ID","USER_PHONE","user_phone")
-        val  edgeRDD9 = createEdgeFromDataframe(imarkingData,"CURRENT_ID","USER_PHONE","openId_phone")
+        val  edgeRDD8 = createEdgeFromDataframe(imarkingData,"REAL_USER_ID","USER_PHONE","imarking")
+        val  edgeRDD9 = createEdgeFromDataframe(imarkingData,"CURRENT_ID","USER_PHONE","imarking")
 
-        val edgeRDD10 = createEdgeFromDataframe(isalesData,"user_id","phone","user_phone")
+        val edgeRDD10 = createEdgeFromDataframe(isalesData,"user_id","phone","isales")
         //    val edgeRDD11 = createEdgeFromDataframe(isalesData,"email","phone","email_phone")
-
-
 
         ///construct  graph
         val vertexRDD = userId.union(deviceId).union(mac).union(idfa).union(phone)
@@ -126,7 +132,6 @@ object OneId {
         val numOfSubGraph = ccGraph.vertices.map{case(_,cc) => cc}.distinct().count()
         println("number of subGraph is: " + numOfSubGraph)
 
-
         ////save to hbase
         saveHbase(graph.vertices
           .leftJoin(ccGraph.vertices){
@@ -139,7 +144,6 @@ object OneId {
         }.map(x => x._1 + "," + x._2._1 + "," + x._2._2 + "," + x._2._3.get).saveAsTextFile("/yanzi/vertices")
 
         graph.edges.map(x => x.srcId + "," + x.attr + "," + x.dstId).saveAsTextFile("/yanzi/edges")
-
 
         //    test(graph,ccGraph)
         sc.stop()

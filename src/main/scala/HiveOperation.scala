@@ -16,13 +16,13 @@ object HiveOperation{
   def getHiveDataframe(sqlContext:SQLContext):DataFrame = {
     val conn = DriverManager.getConnection("jdbc:hive2://192.168.33.25:10000","","")
     val res = conn.createStatement()
-      .executeQuery("select USER_ID,EMAIL,PHONE from dtplatform.DIM_US_USER limit 2000") ///limit 20000
+      .executeQuery("select user_id,email,phone from dtplatform.dim_us_user") ///limit 20000
 
     val fetchRes = mutable.MutableList[StatsRec]()
     while (res.next()){
-      var rec = StatsRec(res.getString("USER_ID"),
-        res.getString("EMAIL"),
-        res.getString("PHONE"))
+      var rec = StatsRec(res.getString("user_id"),
+        res.getString("email"),
+        res.getString("phone"))
       fetchRes += rec
 
     }
