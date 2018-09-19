@@ -13,6 +13,8 @@ import org.apache.spark.sql.{DataFrame, SQLContext}
 import util._
 import HiveOperation._
 import HbaseOperation._
+import Neo4jOperation._
+import org.apache.hadoop.fs.{FileSystem,Path}
 import org.apache.spark.sql.hive.HiveContext
 
 object OneId {
@@ -65,6 +67,7 @@ object OneId {
           .sql("SELECT REAL_USER_ID,USER_PHONE,CURRENT_ID FROM imarkingSql")
 
         val isalesData = getHiveDataframe(sqlContext) ////jdbc connect remote
+        val isalesData2 = getHiveDataframe2(sqlContext)
 
         ///connect remote hive
 //        val hiveContext = new HiveContext(sc)
@@ -94,6 +97,9 @@ object OneId {
         //    val isEmail = createVertexFromDataframe(isalesData,"email","isEmail")
         val isPhone = createVertexFromDataframe(isalesData,"phone","phone")
 
+        val isUserId2 = createVertexFromDataframe(isalesData2,"user_id","isUserId")
+        val isDeviceId2 = createVertexFromDataframe(isalesData2,"device_id","deviceId")
+
 
         /* edge initialization  */
         val  edgeRDD1 = createEdgeFromDataframe(appData,"device_id","login_id","maotai")
@@ -111,15 +117,20 @@ object OneId {
         val edgeRDD10 = createEdgeFromDataframe(isalesData,"user_id","phone","isales")
         //    val edgeRDD11 = createEdgeFromDataframe(isalesData,"email","phone","email_phone")
 
+        val edgeRDD12 = createEdgeFromDataframe(isalesData2,"user_id","device_id","isales")
+
+
         ///construct  graph
         val vertexRDD = userId.union(deviceId).union(mac).union(idfa).union(phone)
           .union(imUserId).union(imPhone).union(imOpenId)
           .union(isUserId).union(isPhone)
+          .union(isUserId2).union(isDeviceId2)
         //      .union(pcDeviceId)
         //    verticeRDD.collect().foreach(println(_))
         val relationRDD = edgeRDD1.union(edgeRDD2).union(edgeRDD3).union(edgeRDD4)
           .union(edgeRDD8).union(edgeRDD9)
           .union(edgeRDD10)
+          .union(edgeRDD12)
 
         //    println(relationRDD.first())
         val defaultVertex = ("Missing","Missing")
@@ -139,11 +150,7 @@ object OneId {
           })
 
         ////export to csv
-        graph.vertices.leftJoin(ccGraph.vertices){
-          case(_,(attr,id),oneId) => (attr,id,oneId)
-        }.map(x => x._1 + "," + x._2._1 + "," + x._2._2 + "," + x._2._3.get).saveAsTextFile("/yanzi/vertices")
-
-        graph.edges.map(x => x.srcId + "," + x.attr + "," + x.dstId).saveAsTextFile("/yanzi/edges")
+        exportToCsv(graph,ccGraph,sc)
 
         //    test(graph,ccGraph)
         sc.stop()

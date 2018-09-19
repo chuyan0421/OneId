@@ -24,6 +24,7 @@ object util {
     val vertexRDD = rawData.select(colName).rdd.distinct()
       .map(x =>(genBKDRHash2(x.getString(0)), (aliasName,x.getString(0)) ))
       .filter(x => x._1 != 0) ///空的节点产生的oneId为 0
+      .filter(x => x._1 != 5944) ////-1的节点产生的oneId为49
     return vertexRDD
 
   }
@@ -31,10 +32,14 @@ object util {
   ///创建边
   def createEdgeFromDataframe(rawData:DataFrame,srcName:String,destName:String, attrName:String):RDD[Edge[String]] = {
     val edgeRDD = rawData.select(srcName,destName)
-      .rdd.distinct().filter(_(1)!= "")
+      .rdd.distinct()
+      ///.filter(_(1)!= "")
       .map(x => Edge(genBKDRHash2(x.getString(0)),genBKDRHash2(x.getString(1)),attrName))
       .filter(x => x.srcId != 0)
+      .filter(x => x.srcId != 5944)
       .filter(x => x.dstId != 0)
+      .filter(x => x.dstId != 5944)
+
     return edgeRDD
   }
 
